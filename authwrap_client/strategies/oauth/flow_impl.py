@@ -1,11 +1,6 @@
-from __future__ import annotations
-
 import base64
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
-
-import httpx
-import requests
 
 from authwrap_client.strategies.oauth.common import TokenResponse, OAuthError
 from authwrap_client.strategies.oauth.flow_protocol import (
@@ -13,6 +8,25 @@ from authwrap_client.strategies.oauth.flow_protocol import (
     PasswordCredentialsFlowProtocol,
     ImplicitFlowProtocol
 )
+
+
+_sclient = None
+_aclient = None
+
+
+def settle_clients(sync_client, async_client) -> Tuple["Session", "AsyncClient"]:
+    # Default to requests.Session and httpx.AsyncClient if none provided
+    if not sync_client:
+        import requests
+        sync_client = requests.Session()
+    _sclient = sync_client
+
+    if not async_client:
+        import httpx
+        async_client = httpx.AsyncClient()
+    _aclient = async_client
+
+    return sync_client, async_client
 
 
 # -------------------------------------------------------------------
@@ -60,9 +74,9 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
         else:
             self.scope = scope or ""
 
-        # Default to requests.Session and httpx.AsyncClient if none provided
-        self.http_client = http_client or requests.Session()
-        self.http_client_async = http_client_async or httpx.AsyncClient()
+        self.http_client, self.http_client_async = settle_clients(http_client, http_client_async)
+
+
 
     def fetch_token_client_credentials(
             self,
@@ -251,8 +265,7 @@ class PasswordCredentialsFlow(PasswordCredentialsFlowProtocol):
         else:
             self.scope = scope or ""
 
-        self.http_client = http_client or requests.Session()
-        self.http_client_async = http_client_async or httpx.AsyncClient()
+        self.http_client, self.http_client_async = settle_clients(http_client, http_client_async)
 
     def fetch_token_with_password(
         self,
@@ -414,7 +427,7 @@ class PasswordCredentialsFlow(PasswordCredentialsFlowProtocol):
 # -------------------------------------------------------------------
 # Implicit Flow Implementation
 # -------------------------------------------------------------------
-
+@deprecated()
 class ImplicitFlow(ImplicitFlowProtocol):
     """
     Implementation of the Implicit grant (RFC 6749 §4.2).
