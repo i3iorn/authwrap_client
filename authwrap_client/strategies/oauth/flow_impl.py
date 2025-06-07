@@ -2,13 +2,14 @@ import base64
 from typing import Any, Dict, List, Optional, Union, Tuple
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
+from authwrap_client.config import FeatureFlag
 from authwrap_client.strategies.oauth.common import TokenResponse, OAuthError
 from authwrap_client.strategies.oauth.flow_protocol import (
     ClientCredentialsFlowProtocol,
     PasswordCredentialsFlowProtocol,
-    ImplicitFlowProtocol
+    ImplicitFlowProtocol, BaseAuthFlowProtocol
 )
-
+from authwrap_client.utils import insecure
 
 _sclient = None
 _aclient = None
@@ -27,6 +28,29 @@ def settle_clients(sync_client, async_client) -> Tuple["Session", "AsyncClient"]
     _aclient = async_client
 
     return sync_client, async_client
+
+
+def get_auth_flow_class(flow_name: str) -> BaseAuthFlowProtocol:
+    """
+    Get the appropriate OAuth2 flow class based on the flow name.
+
+    Args:
+        flow_name: The name of the OAuth2 flow (e.g., "client_credentials", "password", "implicit").
+
+    Returns:
+        A class implementing the corresponding OAuth2 flow protocol.
+
+    Raises:
+        ValueError: If the flow name is not recognized.
+    """
+    if flow_name == "client_credentials":
+        return ClientCredentialsFlow
+    elif flow_name == "password":
+        return PasswordCredentialsFlow
+    elif flow_name == "implicit":
+        return ImplicitFlow
+    else:
+        raise ValueError(f"Unknown OAuth2 flow: {flow_name}")
 
 
 # -------------------------------------------------------------------
@@ -227,7 +251,10 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
 # -------------------------------------------------------------------
 # Resource Owner Password Credentials Flow Implementation
 # -------------------------------------------------------------------
-
+@insecure(
+    FeatureFlag.ENABLE_LEGACY_FEATURES | FeatureFlag.ENABLE_PASSWORD_FLOW,
+    "PasswordCredentialsFlow is insecure and should not be used in production."
+)
 class PasswordCredentialsFlow(PasswordCredentialsFlowProtocol):
     """
     Implementation of the Resource Owner Password Credentials grant (RFC 6749 §4.3).
@@ -427,7 +454,6 @@ class PasswordCredentialsFlow(PasswordCredentialsFlowProtocol):
 # -------------------------------------------------------------------
 # Implicit Flow Implementation
 # -------------------------------------------------------------------
-@deprecated()
 class ImplicitFlow(ImplicitFlowProtocol):
     """
     Implementation of the Implicit grant (RFC 6749 §4.2).
