@@ -1,10 +1,10 @@
 from logging import getLogger
-from typing import Dict, Any
+from typing import Dict, Any, Callable
 
 logger = getLogger(__name__)
 
 
-def _standard_string_validation(value: str, name: str):
+def _standard_string_validation(value: str, name: str) -> None:
     """Helper function to validate standard string inputs."""
     if not value:
         raise ValueError(f"{name} must be provided and cannot be empty.")
@@ -15,7 +15,7 @@ def _standard_string_validation(value: str, name: str):
     logger.debug(f"Validated {name}: {value}")
 
 
-def _validate_client(client):
+def _validate_client(client: Any) -> None:
     """Helper function to validate the client."""
     if not client:
         raise ValueError("Client must not be None.")
@@ -27,7 +27,7 @@ def _validate_client(client):
 
 
 def wrap_client(
-    client, auth_strategy: str, **kwargs
+    client: Any, auth_strategy: str, **kwargs: Any
 ) -> Any:
     """Wraps a client with the specified authentication strategy."""
     from .proxy import AuthorizedClient
@@ -48,8 +48,8 @@ def wrap_client(
 
 
 def wrap_with_basic_auth(
-    client, username: str, password: str, **kwargs
-):
+    client: Any, username: str, password: str, **kwargs: Any
+) -> Any:
     """Wraps a client with Basic Auth."""
     from authwrap_client.strategies import BasicAuth
     from .proxy import AuthorizedClient
@@ -65,8 +65,8 @@ def wrap_with_basic_auth(
 
 
 def wrap_with_bearer_token(
-    client, token: str, **kwargs
-):
+    client: Any, token: str, **kwargs: Any
+) -> Any:
     """Wraps a client with Bearer Token Auth."""
     from authwrap_client.strategies import BearerTokenAuth
     from .proxy import AuthorizedClient
@@ -81,8 +81,8 @@ def wrap_with_bearer_token(
 
 
 def wrap_with_oauth(
-    client, token_url: str, **kwargs
-):
+    client: Any, token_url: str, **kwargs: Any
+) -> Any:
     """Wraps a client with OAuth 2.0 Auth."""
     from authwrap_client.strategies import OAuth2Auth
     from .proxy import AuthorizedClient

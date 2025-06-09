@@ -454,6 +454,10 @@ class PasswordCredentialsFlow(PasswordCredentialsFlowProtocol):
 # -------------------------------------------------------------------
 # Implicit Flow Implementation
 # -------------------------------------------------------------------
+@insecure(
+    FeatureFlag.ENABLE_LEGACY_FEATURES | FeatureFlag.ENABLE_IMPLICIT_FLOW,
+    "ImplicitFlow is insecure and should not be used in production."
+)
 class ImplicitFlow(ImplicitFlowProtocol):
     """
     Implementation of the Implicit grant (RFC 6749 §4.2).

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 from authwrap_client import AuthStrategy
 from authwrap_client.exceptions import InjectionError

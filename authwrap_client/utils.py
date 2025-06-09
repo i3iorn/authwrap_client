@@ -27,15 +27,23 @@ def insecure(flag: FeatureFlag, msg: str) -> Callable:
     and should not be used in production environments. It raises a RuntimeError
     with the provided message when the function or class is called, unless the
     `FeatureFlag` is set.
+    Handles static methods, class methods, and preserves all metadata.
     """
     def decorator(decorated_object):
         if inspect.isclass(decorated_object):
             return _insecure_class(decorated_object, flag, msg)
         elif inspect.isfunction(decorated_object):
             return _insecure_function(decorated_object, flag, msg)
+        elif isinstance(decorated_object, staticmethod):
+            func = decorated_object.__func__
+            return staticmethod(_insecure_function(func, flag, msg))
+        elif isinstance(decorated_object, classmethod):
+            func = decorated_object.__func__
+            return classmethod(_insecure_function(func, flag, msg))
         else:
-            raise TypeError("The `insecure` decorator can only be applied to functions or classes.")
+            raise TypeError("The `insecure` decorator can only be applied to functions, methods, or classes.")
     return decorator
+
 
 def _insecure_function(func, flag: FeatureFlag, msg: str) -> Callable:
     """
@@ -43,14 +51,15 @@ def _insecure_function(func, flag: FeatureFlag, msg: str) -> Callable:
 
     This function wraps the original function and raises a RuntimeError with the
     provided message if the `FeatureFlag` is not set.
+    Handles static and class methods.
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not State().has_flag(flag):
             raise RuntimeError(f"Insecure function called: {msg}")
         return func(*args, **kwargs)
-
     return wrapper
+
 
 def _insecure_class(cls, flag: FeatureFlag, msg: str) -> Callable:
     """
@@ -58,15 +67,13 @@ def _insecure_class(cls, flag: FeatureFlag, msg: str) -> Callable:
 
     This function wraps the original class and raises a RuntimeError with the
     provided message if the `FeatureFlag` is not set.
+    Preserves all class metadata.
     """
+    import functools
     class WrappedClass(cls):
         def __init__(self, *args, **kwargs):
             if not State().has_flag(flag):
                 raise RuntimeError(f"Insecure class instantiated: {msg}")
             super().__init__(*args, **kwargs)
-
-    WrappedClass.__name__ = cls.__name__
-    WrappedClass.__qualname__ = cls.__qualname__
-    WrappedClass.__doc__ = cls.__doc__
-
+    functools.update_wrapper(WrappedClass, cls, updated=())
     return WrappedClass

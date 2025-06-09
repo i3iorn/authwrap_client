@@ -5,7 +5,8 @@ class FeatureFlag(Flag):
     NONE = auto()
     LOG_AUTHORIZATION_HEADERS = auto()  # For debugging purposes
     ENABLE_LEGACY_FEATURES = auto()     # Legacy == OAuth 2.0
-    ENABLE_PASSWORD_FLOW = auto()  # Enable password flow for OAuth 2.0
+    ENABLE_PASSWORD_FLOW = auto()       # Enable password flow for OAuth 2.0
+    ENABLE_IMPLICIT_FLOW = auto()       # Enable implicit flow for OAuth 2.0
 
 
 class State:

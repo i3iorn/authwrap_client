@@ -1,4 +1,5 @@
-from typing import Protocol, Dict, Optional
+from typing import Protocol, Dict, Optional, Any
+
 
 class AuthStrategy(Protocol):
     """Defines a pluggable authorization strategy interface."""
@@ -8,4 +9,98 @@ class AuthStrategy(Protocol):
         ...
 
     def modify_call(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
+        """Modify the request headers with the authorization information."""
+        ...
+
+
+class ClientProtocol(Protocol):
+    """
+    Defines a pluggable client protocol interface for making requests.
+
+    This interface is not ment to be used directly, but rather to be used as an
+    internal proxy for the actual client implementation. It allows for different
+    client implementations to be used interchangeably, as long as they adhere to
+    this protocol.
+    """
+    def request(
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        params: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, str]] = None,
+        json: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """Make a request to the specified URL with the given parameters."""
+        ...
+
+    def get(self, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Make a GET request to the specified URL."""
+        ...
+
+    def post(
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, str]] = None,
+        json: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """Make a POST request to the specified URL."""
+        ...
+
+    def put(
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, str]] = None,
+        json: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """Make a PUT request to the specified URL."""
+        ...
+
+    def delete(self, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Make a DELETE request to the specified URL."""
+        ...
+
+    def patch(
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, str]] = None,
+        json: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
+        """Make a PATCH request to the specified URL."""
+        ...
+
+    def head(self, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Make a HEAD request to the specified URL."""
+        ...
+
+    def options(self, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """Make an OPTIONS request to the specified URL."""
+        ...
+
+
+class RequestProtocol(Protocol):
+    """
+    Defines a pluggable request protocol interface for making requests.
+
+    This interface is not meant to be used directly, but rather to be used as an
+    internal proxy for the actual request implementation. It allows for different
+    request implementations to be used interchangeably, as long as they adhere to
+    this protocol.
+    """
+    @property
+    def status_code(self) -> int:
+        """Get the status code of the last request."""
+        ...
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        """Get the headers of the last request."""
+        ...
+
+    @property
+    def content(self) -> bytes:
+        """Get the content of the last request."""
         ...
