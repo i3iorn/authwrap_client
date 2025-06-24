@@ -54,6 +54,16 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
                 self._handle_exception(name, e)
         return attr
 
+    @property
+    def wrapped_client(self) -> Client:
+        """
+        Get the wrapped client instance.
+
+        Returns:
+            Client: The original HTTP client instance.
+        """
+        return self.__wrapped__
+
     def _handle_async_call(self, func: Callable) -> Any:
         """
         Handle the asynchronous call to the wrapped function, injecting authentication headers.

@@ -104,3 +104,25 @@ class RequestProtocol(Protocol):
     def content(self) -> bytes:
         """Get the content of the last request."""
         ...
+
+
+class ResponseProtocol(Protocol):
+    """
+    Defines a pluggable response protocol interface for handling responses.
+
+    This interface is not meant to be used directly, but rather to be used as an
+    internal proxy for the actual response implementation. It allows for different
+    response implementations to be used interchangeably, as long as they adhere to
+    this protocol.
+    """
+    def json(self) -> Dict[str, Any]:
+        """Parse the response content as JSON."""
+        ...
+
+    def text(self) -> str:
+        """Get the response content as text."""
+        ...
+
+    def extensions(self) -> Dict[str, Any]:
+        """Get any additional extensions or metadata from the response."""
+        ...
