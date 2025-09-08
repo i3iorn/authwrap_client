@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, Optional
 
 from authwrap_client import ValidationProtocol
@@ -257,7 +258,7 @@ class OAuth2Auth(BearerTokenAuth):
         """
         logger.debug("Refreshing token using refresh_token.")
         # Use ClientCredentialsFlowProtocol to refresh (token_url is authorization_server)
-        flow: ClientCredentialsFlowProtocol = ClientCredentialsFlow(
+        flow: ClientCredentialsFlow = ClientCredentialsFlow(
             token_url=authorization_server,
             client_id=client_id or "",
             client_secret=client_secret or "",
@@ -269,6 +270,11 @@ class OAuth2Auth(BearerTokenAuth):
             )
         except OAuthError as e:
             raise InjectionError(f"Failed to refresh token: {e}")
+
+        if not refreshed or not refreshed.access_token:
+            raise InjectionError("Refresh token did not return a valid access token.")
+
+        return refreshed
 
     def _handle_implicit(
         self,
@@ -287,7 +293,7 @@ class OAuth2Auth(BearerTokenAuth):
             raise InjectionError("Scope is required for implicit flow.")
 
         logger.debug("Building Implicit Flow authorization URL.")
-        flow: ImplicitFlowProtocol = ImplicitFlow(
+        flow: ImplicitFlow = ImplicitFlow(
             authorization_endpoint=authorization_endpoint,
             client_id=client_id or "",
             default_scope=scope,

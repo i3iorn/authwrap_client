@@ -2,9 +2,10 @@ from typing import Optional, Union, List, Any, Dict
 
 from ..common import TokenResponse, OAuthError
 from . import settle_clients, _basic_auth_header, sanitize_token_response
+from ..flow_protocol import BaseAuthFlowProtocol
 
 
-class ClientCredentialsFlow:
+class ClientCredentialsFlow(BaseAuthFlowProtocol):
     """
     Implementation of the Client Credentials grant (RFC 6749 §4.4).
 

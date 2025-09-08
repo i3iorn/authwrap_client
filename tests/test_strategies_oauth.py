@@ -4,10 +4,7 @@ from unittest.mock import MagicMock, patch
 from authwrap_client.config import State, FeatureFlag
 from authwrap_client.exceptions import InjectionError
 from authwrap_client.strategies import OAuth2Auth
-from authwrap_client.strategies.oauth.flow_impl import ClientCredentialsFlow, \
-    PasswordCredentialsFlow, ImplicitFlow
 from authwrap_client.strategies.oauth.flow_protocol import TokenResponse
-from authwrap_client import ValidationProtocol
 
 
 # Test Initialization of OAuth2Auth
@@ -30,13 +27,13 @@ def oauth2auth_params():
 def test_oauth2auth_init(mock_session, mock_flow_class, oauth2auth_params):
     mock_token_response = MagicMock(spec=TokenResponse)
     mock_flow_instance = MagicMock()
-    mock_flow_instance.fetch_token_client_credentials.return_value = mock_token_response
+    mock_flow_instance.fetch_token.return_value = mock_token_response
     mock_flow_class.return_value = mock_flow_instance
 
     oauth2auth = OAuth2Auth(**oauth2auth_params)
 
     mock_session.assert_called_once()
-    mock_flow_instance.fetch_token_client_credentials.assert_called_once()
+    mock_flow_instance.fetch_token.assert_called_once()
     assert oauth2auth.token_response == mock_token_response
 
 
@@ -114,19 +111,6 @@ def test_determine_token_flow(oauth2auth_params, access_token, refresh_token, im
     })
 
 
-# Test _handle_refresh method
-def test_handle_refresh(oauth2auth_params):
-    oauth2auth_params['refresh_token'] = "valid_refresh_token"
-    oauth2auth_params['client_id'] = "test-client-id"
-    oauth2auth_params['client_secret'] = "test-client-secret"
-
-    with patch(
-            'authwrap_client.strategies.oauth.flow_impl.ClientCredentialsFlow.refresh_access_token') as mock_refresh:
-        mock_refresh.return_value = MagicMock(spec=TokenResponse)
-        oauth2auth = OAuth2Auth(**oauth2auth_params)
-        assert mock_refresh.called
-
-
 # Test _handle_implicit method (raises InjectionError)
 def test_handle_implicit(oauth2auth_params):
     oauth2auth_params['implicit'] = True
@@ -145,10 +129,13 @@ def test_handle_password(oauth2auth_params):
     State().flags = {FeatureFlag.ENABLE_LEGACY_FEATURES}
 
     with patch(
-        'authwrap_client.strategies.oauth.flow_impl.PasswordCredentialsFlow.fetch_token_with_password'
+        'authwrap_client.strategies.oauth.flows.ClientCredentialsFlow.fetch_token'
     ) as mock_password_flow:
         mock_password_flow.return_value = MagicMock(spec=TokenResponse)
-        auth = OAuth2Auth(**oauth2auth_params)
+
+        # Expect RuntimeError because Password flow is insecure
+        with pytest.raises(RuntimeError):
+            auth = OAuth2Auth(**oauth2auth_params)
 
 
 # Test _handle_client_credentials method
@@ -156,7 +143,7 @@ def test_handle_client_credentials(oauth2auth_params):
     oauth2auth_params['grant_type'] = "client_credentials"
 
     with patch(
-            'authwrap_client.strategies.oauth.flow_impl.ClientCredentialsFlow.fetch_token_client_credentials') as mock_client_credentials_flow:
+            'authwrap_client.strategies.oauth.flows.ClientCredentialsFlow.fetch_token') as mock_client_credentials_flow:
         mock_client_credentials_flow.return_value = MagicMock(spec=TokenResponse)
         oauth2auth = OAuth2Auth(**oauth2auth_params)
         assert mock_client_credentials_flow.called

@@ -41,13 +41,13 @@ def _basic_auth_header(client_id: Optional[str], client_secret: Optional[str]) -
 
 
 def sanitize_token_response(data: dict, fallback_scope: str = "") -> TokenResponse:
-    return {
-        "access_token": data.get("access_token", ""),
-        "token_type": data.get("token_type", ""),
-        "expires_in": int(data.get("expires_in", 0) or 0),
-        "refresh_token": data.get("refresh_token", ""),
-        "scope": data.get("scope", fallback_scope),
-    }
+    return TokenResponse(
+        access_token=data.get("access_token", ""),
+        token_type=data.get("token_type", ""),
+        expires_in=int(data.get("expires_in", 0) or 0),
+        refresh_token=data.get("refresh_token", ""),
+        scope=data.get("scope", fallback_scope),
+    )
 
 __all__ = [
     "settle_clients",
