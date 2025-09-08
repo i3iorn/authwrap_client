@@ -1,7 +1,8 @@
 from typing import Optional, Union, List, Any, Dict
 
-from authwrap_client.strategies.oauth import ClientCredentialsFlowProtocol, TokenResponse, OAuthError
-from authwrap_client.strategies.oauth.flows import settle_clients, _basic_auth_header
+from ..flow_protocol import ClientCredentialsFlowProtocol
+from ..common import TokenResponse, OAuthError
+from . import settle_clients, _basic_auth_header, sanitize_token_response
 
 
 class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
@@ -111,13 +112,7 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
         except ValueError as e:
             raise OAuthError(f"Invalid JSON in token response: {e}")
 
-        return {
-            "access_token": token_data.get("access_token", ""),
-            "token_type": token_data.get("token_type", ""),
-            "expires_in": token_data.get("expires_in", 0),
-            "refresh_token": token_data.get("refresh_token", ""),
-            "scope": token_data.get("scope", token_scope),
-        }
+        return sanitize_token_response(token_data, token_scope)
 
     async def fetch_token_client_credentials_async(
         self,
@@ -175,10 +170,4 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
         except ValueError as e:
             raise OAuthError(f"Invalid JSON in async token response: {e}")
 
-        return {
-            "access_token": token_data.get("access_token", ""),
-            "token_type": token_data.get("token_type", ""),
-            "expires_in": token_data.get("expires_in", 0),
-            "refresh_token": token_data.get("refresh_token", ""),
-            "scope": token_data.get("scope", token_scope),
-        }
+        return sanitize_token_response(token_data, token_scope)

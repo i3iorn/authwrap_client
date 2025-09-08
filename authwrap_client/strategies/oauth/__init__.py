@@ -6,17 +6,19 @@ from typing import Any, Dict, List, Optional, Union
 
 from authwrap_client import ValidationProtocol
 from authwrap_client.exceptions import InjectionError
-from authwrap_client.strategies.oauth.common import OAuthError
+from authwrap_client.strategies.oauth.common import OAuthError, TokenResponse
 from authwrap_client.validate.validator import BaseValidatorService
 from authwrap_client.strategies.bearer_token import BearerTokenAuth
+from .flow_protocol import ClientCredentialsFlowProtocol, ImplicitFlowProtocol, PasswordCredentialsFlowProtocol
 
-from authwrap_client.strategies.oauth.flow_protocol import (
-    ClientCredentialsFlowProtocol,
-    PasswordCredentialsFlowProtocol,
-    ImplicitFlowProtocol,
-    TokenResponse,
-)
-from authwrap_client.strategies.oauth.flows import ClientCredentialsFlow, PasswordCredentialsFlow, ImplicitFlow
+from .flows import ClientCredentialsFlow, PasswordCredentialsFlow, ImplicitFlow
+
+__all__ = [
+    "OAuth2Auth",
+    "ClientCredentialsFlow",
+    "PasswordCredentialsFlow",
+    "ImplicitFlow",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +164,8 @@ class OAuth2Auth(BearerTokenAuth):
             if not hasattr(http_client, "request"):
                 raise InjectionError("HTTP client must have a 'request' method.")
             return http_client
+
+        # Default to requests.Session()
         import requests
         return requests.Session()
 
@@ -318,7 +322,7 @@ class OAuth2Auth(BearerTokenAuth):
             InjectionError: If password flow fails or no token is returned.
         """
         logger.debug("Using PasswordCredentialsFlow for username/password grant.")
-        flow: PasswordCredentialsFlowProtocol = PasswordCredentialsFlow(
+        flow: PasswordCredentialsFlow = PasswordCredentialsFlow(
             token_url=token_url,
             client_id=client_id,
             client_secret=client_secret,
@@ -370,7 +374,7 @@ class OAuth2Auth(BearerTokenAuth):
             http_client=self._http_client,
         )
         try:
-            token_response = flow.fetch_token_client_credentials(
+            token_response = flow.fetch_token(
                 scope=scope, client_id=client_id, client_secret=client_secret, **request_kwargs
             )
         except OAuthError as e:

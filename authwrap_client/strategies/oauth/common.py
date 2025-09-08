@@ -1,8 +1,5 @@
 from typing import TypedDict, Optional, Protocol, Any
 
-import httpx
-import requests
-
 from authwrap_client.exceptions import AuthWrapException
 
 
@@ -31,7 +28,7 @@ class HTTPClientSyncProtocol(Protocol):
     to perform OAuth token endpoint requests.
     """
 
-    def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+    def request(self, method: str, url: str, **kwargs: Any) -> Any:
         ...
 
 
@@ -41,7 +38,7 @@ class HTTPClientAsyncProtocol(Protocol):
     to perform OAuth token endpoint requests.
     """
 
-    async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+    async def request(self, method: str, url: str, **kwargs: Any) -> Any:
         ...
 
 

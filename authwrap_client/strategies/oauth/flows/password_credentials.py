@@ -1,8 +1,9 @@
 from typing import Optional, Union, List, Any, Dict
 
 from authwrap_client.config import FeatureFlag
-from authwrap_client.strategies.oauth import TokenResponse, OAuthError
-from authwrap_client.strategies.oauth.flows import settle_clients, _basic_auth_header
+from authwrap_client.strategies.oauth import OAuthError
+from authwrap_client.strategies.oauth.common import TokenResponse
+from authwrap_client.strategies.oauth.flows import settle_clients, _basic_auth_header, sanitize_token_response
 from authwrap_client.utils import insecure
 
 
@@ -121,13 +122,7 @@ class PasswordCredentialsFlow:
         except ValueError as e:
             raise OAuthError(f"Invalid JSON in password grant response: {e}")
 
-        return {
-            "access_token": token_data.get("access_token", ""),
-            "token_type": token_data.get("token_type", ""),
-            "expires_in": token_data.get("expires_in", 0),
-            "refresh_token": token_data.get("refresh_token", ""),
-            "scope": token_data.get("scope", req_scope),
-        }
+        return sanitize_token_response(token_data, req_scope)
 
     async def fetch_token_with_password_async(
         self,
@@ -193,10 +188,4 @@ class PasswordCredentialsFlow:
         except ValueError as e:
             raise OAuthError(f"Invalid JSON in async password grant response: {e}")
 
-        return {
-            "access_token": token_data.get("access_token", ""),
-            "token_type": token_data.get("token_type", ""),
-            "expires_in": token_data.get("expires_in", 0),
-            "refresh_token": token_data.get("refresh_token", ""),
-            "scope": token_data.get("scope", req_scope),
-        }
+        return sanitize_token_response(token_data, req_scope)

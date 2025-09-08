@@ -2,7 +2,8 @@ from typing import Optional, Union, List, Any, Dict
 from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
 
 from authwrap_client.config import FeatureFlag
-from authwrap_client.strategies.oauth import ImplicitFlowProtocol, TokenResponse, OAuthError
+from authwrap_client.strategies.oauth import OAuthError
+from authwrap_client.strategies.oauth.flow_protocol import ImplicitFlowProtocol, TokenResponse
 from authwrap_client.utils import insecure
 
 
