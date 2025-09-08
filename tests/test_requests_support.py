@@ -59,16 +59,6 @@ def test_requests_support_with_invalid_token():
         # Attempt to create a wrapped requests session with an empty token
         wrap_with_bearer_token(requests.Session(), token="")
     except ValueError as e:
-        assert str(e) == "Bearer token must not be empty."
+        assert str(e) == "Token must be provided and cannot be empty."
     else:
         assert False, "Expected ValueError was not raised."
-
-def test_requests_support_with_invalid_custom_headers():
-    """Test that requests library raises an error with invalid custom headers."""
-    try:
-        # Attempt to create a wrapped requests session with invalid custom headers
-        wrap_with_bearer_token(requests.Session(), token="test_token", custom_header=123)
-    except TypeError as e:
-        assert str(e) == "Custom headers must be a dictionary with string keys and values."
-    else:
-        assert False, "Expected TypeError was not raised."

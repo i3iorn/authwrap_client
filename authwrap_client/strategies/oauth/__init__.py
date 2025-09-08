@@ -366,7 +366,7 @@ class OAuth2Auth(BearerTokenAuth):
             raise InjectionError("Scope must be provided for client credentials flow.")
 
         logger.debug("Using ClientCredentialsFlow for client credentials grant.")
-        flow: ClientCredentialsFlowProtocol = ClientCredentialsFlow(
+        flow: ClientCredentialsFlow = ClientCredentialsFlow(
             token_url=token_url,
             client_id=client_id,
             client_secret=client_secret,

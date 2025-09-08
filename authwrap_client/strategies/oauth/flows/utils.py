@@ -14,12 +14,18 @@ def settle_clients(sync_client, async_client) -> Tuple["Session", "AsyncClient"]
     """
     global _sclient, _aclient
     if not sync_client and not _sclient:
-        import requests
+        try:
+            import requests
+        except ImportError as e:
+            raise ImportError("requests is required for sync HTTP client support") from e
         sync_client = requests.Session()
     _sclient = sync_client
     if not async_client and not _aclient:
-        import httpx
-        async_client = httpx.AsyncClient()
+        try:
+            import httpx
+        except ImportError as e:
+            raise ImportError("httpx is required for async HTTP client support") from e
+        async_client = httpx.Client
     _aclient = async_client
     return sync_client, async_client
 

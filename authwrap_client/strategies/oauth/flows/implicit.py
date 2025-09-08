@@ -11,7 +11,7 @@ from authwrap_client.utils import insecure
     FeatureFlag.ENABLE_LEGACY_FEATURES | FeatureFlag.ENABLE_IMPLICIT_FLOW,
     "ImplicitFlow is insecure and should not be used in production."
 )
-class ImplicitFlow(ImplicitFlowProtocol):
+class ImplicitFlow:
     """
     Implementation of the Implicit grant (RFC 6749 §4.2).
 

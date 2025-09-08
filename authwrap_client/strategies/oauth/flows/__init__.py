@@ -17,7 +17,7 @@ __all__ = [
 ]
 
 
-def get_auth_flow_class(flow_name: str) -> Type[BaseAuthFlowProtocol]:
+def get_auth_flow_class(flow_name: str) -> Type:
     """
     Get the appropriate OAuth2 flow class based on the flow name.
 

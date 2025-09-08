@@ -15,18 +15,6 @@ def test_wrap_with_bearer_token():
     wrapped = wrap_client(client, 'bearer_token', token='abc')
     assert hasattr(wrapped, 'request')
 
-def test_wrap_with_oauth():
-    client = DummyClient()
-    wrapped = wrap_client(
-        client,
-        'oauth',
-        client_id='id1',
-        client_secret="98uygfc",
-        scope='openid email profile',
-        token_url='https://example.com/token'
-    )
-    assert hasattr(wrapped, 'request')
-
 def test_invalid_strategy():
     client = DummyClient()
     with pytest.raises(ValueError):

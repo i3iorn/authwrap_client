@@ -1,11 +1,10 @@
 from typing import Optional, Union, List, Any, Dict
 
-from ..flow_protocol import ClientCredentialsFlowProtocol
 from ..common import TokenResponse, OAuthError
 from . import settle_clients, _basic_auth_header, sanitize_token_response
 
 
-class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
+class ClientCredentialsFlow:
     """
     Implementation of the Client Credentials grant (RFC 6749 §4.4).
 
@@ -50,7 +49,7 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
 
 
 
-    def fetch_token_client_credentials(
+    def fetch_token(
             self,
             *,
             scope: Optional[Union[str, List[str]]] = None,
@@ -114,7 +113,7 @@ class ClientCredentialsFlow(ClientCredentialsFlowProtocol):
 
         return sanitize_token_response(token_data, token_scope)
 
-    async def fetch_token_client_credentials_async(
+    async def fetch_token_async(
         self,
         *,
         scope: Optional[Union[str, List[str]]] = None,
