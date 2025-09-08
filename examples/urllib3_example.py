@@ -1,8 +1,8 @@
 import urllib3
-from authwrap_client import wrap_with_oauth
+from authwrap_client import wrap_with_oauth2
 
 http = urllib3.PoolManager()
-client = wrap_with_oauth(
+client = wrap_with_oauth2(
     http,
     token_url="https://login.example.com/oauth2",
     client_id="c2a8t25f66a",
