@@ -14,7 +14,7 @@ class OAuth2AuthV2(BearerTokenAuth):
         **kwargs: Additional parameters required for the selected flow.
     """
     def __init__(self, auth_flow: str, **kwargs: Any) -> None:
-        from .flow_impl import get_auth_flow_class
+        from .flows import get_auth_flow_class
 
         flow_class = get_auth_flow_class(auth_flow)
         if not flow_class:

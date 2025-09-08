@@ -4,9 +4,6 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Union
 
-import requests
-import httpx
-
 from authwrap_client import ValidationProtocol
 from authwrap_client.exceptions import InjectionError
 from authwrap_client.strategies.oauth.common import OAuthError
@@ -19,11 +16,7 @@ from authwrap_client.strategies.oauth.flow_protocol import (
     ImplicitFlowProtocol,
     TokenResponse,
 )
-from authwrap_client.strategies.oauth.flow_impl import (
-    ClientCredentialsFlow,
-    PasswordCredentialsFlow,
-    ImplicitFlow,
-)
+from authwrap_client.strategies.oauth.flows import ClientCredentialsFlow, PasswordCredentialsFlow, ImplicitFlow
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +162,7 @@ class OAuth2Auth(BearerTokenAuth):
             if not hasattr(http_client, "request"):
                 raise InjectionError("HTTP client must have a 'request' method.")
             return http_client
+        import requests
         return requests.Session()
 
     def _determine_token(
