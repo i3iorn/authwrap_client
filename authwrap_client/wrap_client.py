@@ -42,7 +42,7 @@ def wrap_client(
     elif auth_strategy == "bearer_token":
         return wrap_with_bearer_token(client, **kwargs)
     elif auth_strategy in ["oauth", "oauth2"]:
-        return wrap_with_oauth(client, **kwargs)
+        return wrap_with_oauth2(client, **kwargs)
     else:
         raise ValueError(f"Unsupported authentication strategy: {auth_strategy}")
 
@@ -80,7 +80,7 @@ def wrap_with_bearer_token(
     return AuthorizedClient(client, auth)
 
 
-def wrap_with_oauth(
+def wrap_with_oauth2(
     client: Any, token_url: str, **kwargs: Any
 ) -> Any:
     """Wraps a client with OAuth 2.0 Auth."""
