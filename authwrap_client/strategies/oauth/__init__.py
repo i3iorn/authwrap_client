@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from authwrap_client import ValidationProtocol
+from authwrap_client.base import ResponseProtocol
 from authwrap_client.exceptions import InjectionError
 from authwrap_client.strategies.oauth.common import OAuthError, TokenResponse
 from authwrap_client.validate.validator import BaseValidatorService
@@ -68,7 +68,6 @@ class OAuth2Auth(BearerTokenAuth):
         implicit: bool = False,
         access_token: Optional[str] = None,
         refresh_token: Optional[str] = None,
-        token_expiry_time: Optional[float] = None,
         grant_type: str = "client_credentials",
         scope: Optional[str] = None,
         additional_headers: Optional[Dict[str, str]] = None,
@@ -78,26 +77,29 @@ class OAuth2Auth(BearerTokenAuth):
         **request_kwargs: Any,
     ) -> None:
         # 1. Validate all incoming parameters
-        self._validate_parameters(
-            authorization_server=authorization_server,
-            client_id=client_id,
-            client_secret=client_secret,
-            username=username,
-            password=password,
-            authorization_code=authorization_code,
-            scope=scope,
-            implicit=implicit,
-            access_token=access_token,
-            refresh_token=refresh_token,
-            grant_type=grant_type,
-            validation_service=validation_service,
-        )
+        try:
+            self._validate_parameters(
+                authorization_server=authorization_server,
+                client_id=client_id,
+                client_secret=client_secret,
+                username=username,
+                password=password,
+                authorization_code=authorization_code,
+                scope=scope,
+                implicit=implicit,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                grant_type=grant_type,
+                validation_service=validation_service,
+            )
+        except Exception as e:
+            raise InjectionError(f"Invalid OAuth2 parameters: {e}") from e
 
         # 2. Initialize or verify the HTTP client
         self._http_client = self._initialize_http_client(http_client)
 
         # 3. Determine which token to use or fetch
-        token = self._determine_token(
+        self.token_response = self._determine_token(
             authorization_server=authorization_server,
             client_id=client_id,
             client_secret=client_secret,
@@ -106,11 +108,11 @@ class OAuth2Auth(BearerTokenAuth):
             implicit=implicit,
             access_token=access_token,
             refresh_token=refresh_token,
-            token_expiry_time=token_expiry_time,
             grant_type=grant_type,
             scope=scope,
             request_kwargs=request_kwargs,
         )
+        token = self.token_response.json()["access_token"]
 
         # 4. Initialize the BearerTokenAuth superclass
         additional_headers = additional_headers or {}
@@ -177,13 +179,12 @@ class OAuth2Auth(BearerTokenAuth):
         username: Optional[str],
         password: Optional[str],
         implicit: bool,
-        access_token: Optional[str],
+        access_token: Optional[TokenResponse],
         refresh_token: Optional[str],
-        token_expiry_time: Optional[float],
         grant_type: str,
         scope: Optional[str],
         request_kwargs: Dict[str, Any],
-    ) -> str:
+    ) -> ResponseProtocol:
         """
         Determine which access token to use (existing, refreshed, or newly fetched).
 
@@ -191,9 +192,11 @@ class OAuth2Auth(BearerTokenAuth):
             InjectionError: If no valid token can be obtained.
         """
         # 3a. Reuse existing token if not expired
-        if access_token and token_expiry_time is not None and not self._is_token_expired(token_expiry_time):
-            logger.debug("Reusing existing non-expired access token.")
-            return access_token
+        if access_token:
+            if not isinstance(access_token, TokenResponse):
+                raise InjectionError("Provided access_token is invalid.")
+            if access_token.is_valid:
+                return access_token
 
         # 3b. Refresh via refresh_token if provided
         if refresh_token:
@@ -245,7 +248,7 @@ class OAuth2Auth(BearerTokenAuth):
         refresh_token: str,
         scope: Optional[str],
         request_kwargs: Dict[str, Any],
-    ) -> str:
+    ) -> ResponseProtocol:
         """
         Refresh an access token using a refresh token.
 
@@ -267,20 +270,13 @@ class OAuth2Auth(BearerTokenAuth):
         except OAuthError as e:
             raise InjectionError(f"Failed to refresh token: {e}")
 
-        token = refreshed.get("access_token", "")
-        if not token:
-            raise InjectionError("Refresh flow did not return an access_token.")
-
-        logger.debug("Obtained new access token via refresh.")
-        return token
-
     def _handle_implicit(
         self,
         authorization_endpoint: str,
         client_id: Optional[str],
         scope: Optional[str],
         request_kwargs: Dict[str, Any],
-    ) -> str:
+    ) -> TokenResponse:
         """
         Build the Implicit Flow authorization URL and raise an exception instructing the user.
 
@@ -314,7 +310,7 @@ class OAuth2Auth(BearerTokenAuth):
         client_secret: Optional[str],
         scope: Optional[str],
         request_kwargs: Dict[str, Any],
-    ) -> str:
+    ) -> TokenResponse:
         """
         Use Resource Owner Password Credentials to fetch a token.
 
@@ -341,12 +337,7 @@ class OAuth2Auth(BearerTokenAuth):
         except OAuthError as e:
             raise InjectionError(f"Password Credentials flow failed: {e}")
 
-        token = token_response.get("access_token", "")
-        if not token:
-            raise InjectionError("Password flow did not return an access_token.")
-
-        logger.debug("Obtained access token via Password Credentials grant.")
-        return token
+        return token_response
 
     def _handle_client_credentials(
         self,
@@ -355,7 +346,7 @@ class OAuth2Auth(BearerTokenAuth):
         client_secret: str,
         scope: Optional[str],
         request_kwargs: Dict[str, Any],
-    ) -> str:
+    ) -> TokenResponse:
         """
         Use Client Credentials grant to fetch a token.
 
@@ -380,9 +371,7 @@ class OAuth2Auth(BearerTokenAuth):
         except OAuthError as e:
             raise InjectionError(f"Client Credentials flow failed: {e}")
 
-        token = token_response.get("access_token", "")
-        if not token:
-            raise InjectionError("Client credentials flow did not return an access_token.")
+        return token_response
 
         logger.debug("Obtained access token via Client Credentials grant.")
         return token

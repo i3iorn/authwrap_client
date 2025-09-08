@@ -1,6 +1,8 @@
 from logging import getLogger
 from typing import Dict, Any, Callable
 
+from .proxy import AuthorizedClient
+
 logger = getLogger(__name__)
 
 
@@ -52,7 +54,6 @@ def wrap_with_basic_auth(
 ) -> Any:
     """Wraps a client with Basic Auth."""
     from authwrap_client.strategies import BasicAuth
-    from .proxy import AuthorizedClient
 
     # Validate input and do sanity checks
     _standard_string_validation(username, "Username")
@@ -69,7 +70,6 @@ def wrap_with_bearer_token(
 ) -> Any:
     """Wraps a client with Bearer Token Auth."""
     from authwrap_client.strategies import BearerTokenAuth
-    from .proxy import AuthorizedClient
 
     # Validate input and do sanity checks
     _standard_string_validation(token, "Token")
@@ -85,7 +85,6 @@ def wrap_with_oauth2(
 ) -> Any:
     """Wraps a client with OAuth 2.0 Auth."""
     from authwrap_client.strategies import OAuth2Auth
-    from .proxy import AuthorizedClient
 
     # Validate input and do sanity checks
     _validate_client(client)
@@ -93,3 +92,10 @@ def wrap_with_oauth2(
     auth = OAuth2Auth(token_url, **kwargs)
     logger.debug(f"Wrapping client with OAuth 2.0 Auth for token URL: {token_url}")
     return AuthorizedClient(client, auth)
+
+
+def unwrap_client(client: AuthorizedClient) -> Any:
+    """Unwraps a client, returning the original client."""
+    if hasattr(client, '_wrapped_client'):
+        return client.wrapped_client
+    return client
