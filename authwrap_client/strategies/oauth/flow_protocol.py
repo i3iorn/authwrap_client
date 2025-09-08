@@ -149,6 +149,7 @@ class TokenExchangeProtocol(Protocol):
 
     def fetch_token(
         self,
+        *args: Any,
         **kwargs: Any
     ) -> TokenResponse:
         """
@@ -167,6 +168,7 @@ class TokenExchangeProtocol(Protocol):
 
     async def fetch_token_async(
         self,
+        *args: Any,
         **kwargs: Any
     ) -> TokenResponse:
         """
@@ -284,7 +286,7 @@ class PasswordCredentialsFlowProtocol(
       - refresh_access_token, revoke_token, introspect_token, etc. (BaseAuthFlowProtocol)
     """
 
-    def fetch_token_with_password(
+    def fetch_token(
         self,
         username: str,
         password: str,
@@ -314,7 +316,7 @@ class PasswordCredentialsFlowProtocol(
         """
         ...
 
-    async def fetch_token_with_password_async(
+    async def fetch_token_async(
         self,
         username: str,
         password: str,
@@ -341,7 +343,7 @@ class ClientCredentialsFlowProtocol(
       - refresh_access_token, revoke_token, introspect_token, etc. (BaseAuthFlowProtocol)
     """
 
-    def fetch_token_client_credentials(
+    def fetch_token(
         self,
         scope: Optional[Union[str, List[str]]] = None,
         client_id: Optional[str] = None,
@@ -366,7 +368,7 @@ class ClientCredentialsFlowProtocol(
         """
         ...
 
-    async def fetch_token_client_credentials_async(
+    async def fetch_token_async(
         self,
         scope: Optional[Union[str, List[str]]] = None,
         client_id: Optional[str] = None,
