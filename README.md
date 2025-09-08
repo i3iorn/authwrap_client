@@ -1,80 +1,70 @@
 # AuthWrap Client
 
-AuthWrap Client is a Python library designed to simplify the process of adding authentication headers to HTTP client requests. It provides a flexible and pluggable interface for various authentication strategies, such as Basic Auth, OAuth2, and Bearer Tokens.
+AuthWrap Client is a Python library designed to simplify adding authentication to HTTP client requests. It provides a flexible, pluggable interface for strategies like Basic Auth, OAuth2, Bearer Tokens, and API keys.
 
 ## Features
 - Transparent wrapper for HTTP clients to inject authentication headers.
-- Support for both synchronous and asynchronous HTTP clients.
+- Support for synchronous and asynchronous HTTP clients (via separate adapters).
 - Pluggable authentication strategies.
 - Configurable exception handling policies.
 
 ## Requirements
 - Python 3.8 or higher
-- `wrapt` library (version 1.14.1 or higher)
+- See pyproject.toml for optional development dependencies
 
 ## Installation
 To install the library, use pip:
 
 ```bash
-pip install authwrap-client
+pip install .
 ```
-
-Ensure you have Python 3.8 or higher installed.
 
 ## Usage
 
 ### Wrapping an HTTP Client
-AuthWrap Client provides a `wrap_with_*` function for each supported authentication strategy. Below is an example of how to use it with an `httpx.AsyncClient`:
+AuthWrap Client provides convenience wrappers for common auth strategies. Use environment variables for secrets in examples.
+
+Example (requests + OAuth2):
 
 ```python
-import httpx
-from authwrap_client import wrap_with_bearer_token
+import os
+from authwrap_client import wrap_with_oauth2
+import requests
 
-# Wrap the client with Bearer Token authentication
-client = wrap_with_bearer_token(httpx.AsyncClient(), token="your_token_here")
+TOKEN_URL = os.environ.get("AUTH_TOKEN_URL")
+CLIENT_ID = os.environ.get("AUTH_CLIENT_ID")
+CLIENT_SECRET = os.environ.get("AUTH_CLIENT_SECRET")
 
-async def main():
-    response = await client.get("https://httpbin.org/headers")
-    print(response.json())
+session = requests.Session()
+client = wrap_with_oauth2(
+    session,
+    token_url=TOKEN_URL,
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    scope="read",
+)
 
-# Run the async function
-import asyncio
-asyncio.run(main())
+resp = client.post("https://api.example.com/data", json={"key": "value"})
+print(resp.status_code)
 ```
 
 ### Available Wrappers
-- `wrap_with_basic_auth`: For Basic Authentication.
-- `wrap_with_oauth2`: For OAuth2 Authentication.
-- `wrap_with_bearer_token`: For Bearer Token Authentication.
+- `wrap_with_basic_auth(client, username, password)`
+- `wrap_with_bearer_token(client, token)`
+- `wrap_with_oauth2(client, token_url, ...)`
+- `wrap_client(client, auth_strategy, **kwargs)`  # generic entrypoint
 
 ### Exception Handling
-The library supports configurable exception handling policies via the `AUTHWRAP_EXCEPTION_POLICY` environment variable:
-- `raise`: Raise exceptions when authentication fails.
-- `log`: Log exceptions and continue.
-- `ignore`: Ignore exceptions silently.
-
-Set the policy as follows:
-
-```bash
-export AUTHWRAP_EXCEPTION_POLICY=log
-```
+The library supports a configurable exception policy via the `AUTHWRAP_EXCEPTION_POLICY` environment variable:
+- `raise`: raise exceptions on auth failures (default)
+- `log`: log exceptions and continue
+- `ignore`: ignore exceptions silently
 
 ## Examples
-Examples of using the library with different HTTP clients are available in the `examples/` directory:
-- `httpx_async_example.py`
-- `requests_example.py`
-- `urllib3_example.py`
-
-## Project Metadata
-- **Name**: AuthWrap Client
-- **Version**: 0.1.0
-- **Description**: Transparent authorization wrapper for any Python HTTP client.
+See the `examples/` directory for concrete usage with requests, httpx, and urllib3.
 
 ## Contributing
-Contributions are welcome! Please follow these steps:
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Submit a pull request.
+Please read `CONTRIBUTING.md` for guidelines. Run tests with pytest and format code with black/ruff.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+MIT — see the LICENSE file.
