@@ -32,6 +32,7 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
         """
         super().__init__(wrapped)
         self._self_auth = auth
+        self._self_storage = storage
 
     def __getattr__(self, name: str) -> Any:
         """

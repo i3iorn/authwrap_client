@@ -1,6 +1,6 @@
+from __future__ import annotations
 from typing import Dict, Optional
 
-from authwrap_client.base import RequestProtocol
 from authwrap_client.storage.protocol import StorageProtocol
 
 

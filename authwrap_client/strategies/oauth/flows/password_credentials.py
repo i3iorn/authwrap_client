@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, Union, List, Any, Dict
 
 from authwrap_client.config import FeatureFlag

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Type
 
 from authwrap_client.strategies.oauth.flow_protocol import BaseAuthFlowProtocol

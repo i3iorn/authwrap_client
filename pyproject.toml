@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Transparent authorization wrapper for any Python HTTP client."
 authors = [{ name = "Björn Schrammel", email = "authwrap@schrammel.dev" }]
 dependencies = [
-    "wrapt>=1.14.1"
+    "wrapt>=1.17.3"
 ]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -17,12 +17,51 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=7.0",
+  "pytest>=8.4.0",
   "mypy>=0.991",
-  "ruff>=0.0",
-  "black>=22.0",
+  "ruff>=0.14.0",
+  "pre-commit>=4.3.0",
 ]
 
 [build-system]
 requires = ["setuptools>=61.0","wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 88
+select = [
+  "E",        # pycodestyle errors
+  "F",        # pyflakes
+  "W",        # pycodestyle warnings
+  "C90",      # mccabe complexity
+  "B",        # flake8-bugbear
+  "B9",       # flake8-bugbear opinionated warnings
+  "ANN",      # flake8-annotations
+  "COM",      # flake8-commas
+  "D",        # pydocstyle
+  "I",        # isort
+  "N",        # pep8-naming
+  "QU",       # flake8-quotes
+  "S",        # flake8-bandit (security)
+  "TID2518",  # flake8-tidy-imports: ban relative imports
+  "TID2521",  # flake8-tidy-imports: ban standard library imports
+]
+ignore = ["E501", "W503", "D107"]
+exclude = ["build", "dist", ".venv", "__pycache__"]
+per-file-ignores = { "__init__.py" = ["F401", "D104", "D107"] }
+
+[tool.mypy]
+python_version = 3.8
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+strict_equality = true
+files = ["authwrap_client", "tests"]

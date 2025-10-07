@@ -1,15 +1,17 @@
 from typing import Protocol, Dict, Optional, Any
 
+from authwrap_client.strategies.base import AuthStrategyPosition
+
 
 class AuthStrategy(Protocol):
     """Defines a pluggable authorization strategy interface."""
     @property
-    def auth_position(self) -> str:
+    def auth_position(self) -> AuthStrategyPosition:
         """Defines the position of the auth strategy in the request."""
         ...
 
     def modify_call(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
-        """Modify the request headers with the authorization information."""
+        """Mutates the request headers with the authorization information."""
         ...
 
 
@@ -91,6 +93,42 @@ class RequestProtocol(Protocol):
     this protocol.
     """
     @property
+    def method(self) -> str:
+        """Get the method of the last request."""
+        ...
+
+    @property
+    def url(self) -> str:
+        """Get the URL of the last request."""
+        ...
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        """Get the headers of the last request."""
+        ...
+
+    @property
+    def params(self) -> Dict[str, str]:
+        """Get the query parameters of the last request."""
+        ...
+
+    @property
+    def data(self) -> Optional[Dict[str, str]]:
+        """Get the form data of the last request."""
+        ...
+
+
+
+class ResponseProtocol(Protocol):
+    """
+    Defines a pluggable response protocol interface for handling responses.
+
+    This interface is not meant to be used directly, but rather to be used as an
+    internal proxy for the actual response implementation. It allows for different
+    response implementations to be used interchangeably, as long as they adhere to
+    this protocol.
+    """
+    @property
     def status_code(self) -> int:
         """Get the status code of the last request."""
         ...
@@ -105,16 +143,6 @@ class RequestProtocol(Protocol):
         """Get the content of the last request."""
         ...
 
-
-class ResponseProtocol(Protocol):
-    """
-    Defines a pluggable response protocol interface for handling responses.
-
-    This interface is not meant to be used directly, but rather to be used as an
-    internal proxy for the actual response implementation. It allows for different
-    response implementations to be used interchangeably, as long as they adhere to
-    this protocol.
-    """
     def json(self) -> Dict[str, Any]:
         """Parse the response content as JSON."""
         ...
