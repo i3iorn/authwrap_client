@@ -19,7 +19,7 @@ class AuthStrategy(Protocol):
         ...
 
     def modify_call(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
-                """Return new headers with the authorization information."""
+        """Return new headers with the authorization information."""
         ...
 
 
