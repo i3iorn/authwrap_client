@@ -1,18 +1,12 @@
-import logging
-from enum import Enum
-from typing import Dict, Optional, Any
+from __future__ import annotations
 
-from authwrap_client import AuthStrategy
+import logging
+from typing import Dict, Optional
+
+from authwrap_client.base import AuthStrategy, AuthStrategyPosition
 from authwrap_client.exceptions import InjectionError
 
 logger = logging.getLogger(__name__)
-
-
-class AuthStrategyPosition(Enum):
-    """Defines the position of the auth strategy in the request."""
-    HEADER = "headers"
-    BODY = "json"
-    QUERY_PARAM = "params"
 
 
 class BaseAuth(AuthStrategy):
@@ -23,13 +17,18 @@ class BaseAuth(AuthStrategy):
 
     Args:
         data (Dict[str, str]): Key-value pairs to inject into the request.
+        allow_rewrite (bool): Whether existing keys may be overwritten during injection.
+        allow_overwrite (Optional[bool]): Preferred name for allow_rewrite; if provided, overrides allow_rewrite.
     """
 
-    def __init__(self, data: Dict[str, str], allow_rewrite: bool = False) -> None:
+    def __init__(self, data: Dict[str, str], allow_rewrite: bool = False, *, allow_overwrite: Optional[bool] = None) -> None:
         if not data:
             raise InjectionError("Auth data must not be empty.")
         self.data = data
-        self.rewrite = allow_rewrite
+        final_overwrite = allow_overwrite if allow_overwrite is not None else allow_rewrite
+        self.allow_overwrite = bool(final_overwrite)
+        # Backward-compat alias used internally before rename
+        self.rewrite = self.allow_overwrite
 
     def modify_call(self, data: Optional[Dict[str, str]]) -> Dict[str, str]:
         """
@@ -45,22 +44,29 @@ class BaseAuth(AuthStrategy):
             InjectionError: If the injection process fails.
         """
         try:
-            logger.debug(f"Injecting into {self.auth_position.value}: {self.data}")
+            logger.debug("Injecting into %s: %s", self.auth_position.value, list(self.data.keys()))
             updated = data.copy() if data else {}
 
-            if not self.rewrite:
-                if data and len(set(self.data.keys()).intersection(data.keys())) > 0:
+            if not self.allow_overwrite and data:
+                conflict = set(self.data.keys()).intersection(updated.keys())
+                if conflict:
                     raise InjectionError(
-                        f"Cannot inject into {self.auth_position.value} as it would overwrite existing keys. "
-                        "Set allow_rewrite=True to allow this."
+                        f"Cannot inject into {self.auth_position.value} as it would overwrite existing keys: {sorted(conflict)}. "
+                        "Set allow_overwrite=True (or legacy allow_rewrite=True) to allow this."
                     )
 
             updated.update(self.data)
             return updated
+        except InjectionError:
+            raise
         except Exception as e:
             msg = f"Failed to inject into {self.auth_position.value}: {e}"
             logger.error(msg, exc_info=True)
             raise InjectionError(msg) from e
+
+    # Naming-friendly alias for clarity in call sites
+    def apply_authentication_to_section(self, existing_section: Optional[Dict[str, str]]) -> Dict[str, str]:
+        return self.modify_call(existing_section)
 
 
 class HeaderAuth(BaseAuth):

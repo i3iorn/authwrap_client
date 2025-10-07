@@ -21,6 +21,7 @@ dev = [
   "mypy>=0.991",
   "ruff>=0.14.0",
   "pre-commit>=4.3.0",
+  "codecov>=2.1.13",
 ]
 
 [build-system]
@@ -34,19 +35,18 @@ select = [
   "F",        # pyflakes
   "W",        # pycodestyle warnings
   "C90",      # mccabe complexity
-  "B",        # flake8-bugbear
-  "B9",       # flake8-bugbear opinionated warnings
+    "B9",       # flake8-bugbear opinionated warnings "B9",       # bugbear opinions
   "ANN",      # flake8-annotations
   "COM",      # flake8-commas
   "D",        # pydocstyle
   "I",        # isort
   "N",        # pep8-naming
+    "S",        # flake8-bandit (security)
   "QU",       # flake8-quotes
-  "S",        # flake8-bandit (security)
-  "TID2518",  # flake8-tidy-imports: ban relative imports
-  "TID2521",  # flake8-tidy-imports: ban standard library imports
+ignore = ["E501", "D107", "W503"]dy-imports: ban relative imports
+  "TID2521",  # flake8-tidy-imports: ban standard library imports in __init__.py
 ]
-ignore = ["E501", "W503", "D107"]
+ignore = ["E501", "D107"]
 exclude = ["build", "dist", ".venv", "__pycache__"]
 per-file-ignores = { "__init__.py" = ["F401", "D104", "D107"] }
 
@@ -65,3 +65,7 @@ warn_unused_ignores = true
 warn_unused_configs = true
 strict_equality = true
 files = ["authwrap_client", "tests"]
+
+[tool.pre-commit]
+repos = [
+  { repo = "authrap"

@@ -3,6 +3,7 @@ import inspect
 import os
 import traceback
 from collections.abc import Callable
+from functools import wraps
 
 import wrapt
 from typing import Any, TypeVar, Generic
@@ -10,12 +11,12 @@ from .base import AuthStrategy
 from .exceptions import AuthWrapConfigurationError, AuthWrapException
 from .storage.protocol import StorageProtocol
 
-_auth_policy_exception_msg = "Invalid AUTHWRAP_EXCEPTION_POLICY: {exception_policy}. Must be 'raise', 'log', or 'ignore'."
-_auth_injection_failed_msg = "Failed to inject auth headers for {name}: {error}"
+_invalid_exception_policy_message = "Invalid AUTHWRAP_EXCEPTION_POLICY: {exception_policy}. Must be 'raise', 'log', or 'ignore'."
+_auth_injection_failed_message = "Failed to inject auth headers for {name}: {error}"
 
 EXCEPTION_POLICY = os.getenv("AUTHWRAP_EXCEPTION_POLICY", "raise").lower()
 if EXCEPTION_POLICY not in {"raise", "log", "ignore"}:
-    raise AuthWrapConfigurationError(_auth_policy_exception_msg.format(exception_policy=EXCEPTION_POLICY))
+    raise AuthWrapConfigurationError(_invalid_exception_policy_message.format(exception_policy=EXCEPTION_POLICY))
 
 Client = TypeVar('Client')
 logger = logging.getLogger(__name__)
@@ -31,8 +32,8 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
             auth (AuthStrategy): The authentication strategy to use.
         """
         super().__init__(wrapped)
-        self._self_auth = auth
-        self._self_storage = storage
+        self._auth_strategy = auth
+        self._storage_backend = storage
 
     def __getattr__(self, name: str) -> Any:
         """
@@ -48,9 +49,9 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
         if callable(attr):
             try:
                 if inspect.iscoroutinefunction(attr):
-                    attr = self._handle_async_call(attr)
+                    attr = self._wrap_async_callable_with_authentication(attr)
                 else:
-                    attr = self._handle_call(attr)
+                    attr = self._wrap_sync_callable_with_authentication(attr)
             except AuthWrapException as e:
                 self._handle_exception(name, e)
         return attr
@@ -65,7 +66,15 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
         """
         return self.__wrapped__
 
-    def _handle_async_call(self, func: Callable) -> Any:
+    def inject_authentication_into_call_kwargs(self, func_name: str, kwargs: dict) -> None:
+        """Safely inject auth data into kwargs according to policy."""
+        try:
+            key = self._auth_strategy.auth_position.value
+            kwargs[key] = self._auth_strategy.modify_call(kwargs.get(key))
+        except Exception as e:
+            self._handle_exception(func_name, e)
+
+    def _wrap_async_callable_with_authentication(self, func: Callable) -> Any:
         """
         Handle the asynchronous call to the wrapped function, injecting authentication headers.
 
@@ -76,15 +85,15 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
             Any: The result of the function call.
         """
         try:
+            @wraps(func)
             async def wrapped(*args, **kwargs):
-                kwargs[self._self_auth.auth_position.value] = self._self_auth.modify_call(
-                    kwargs.get(self._self_auth.auth_position.value))
+                self.inject_authentication_into_call_kwargs(func.__name__, kwargs)
                 return await func(*args, **kwargs)
             return wrapped
         except Exception as e:
             raise AuthWrapException(f"Failed to inject auth headers for {func.__name__}: {e}") from e
 
-    def _handle_call(self, func: Callable) -> Any:
+    def _wrap_sync_callable_with_authentication(self, func: Callable) -> Any:
         """
         Handle the call to the wrapped function, injecting authentication headers.
 
@@ -95,9 +104,9 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
             Any: The result of the function call.
         """
         try:
+            @wraps(func)
             def wrapped(*args, **kwargs):
-                kwargs[self._self_auth.auth_position.value] = self._self_auth.modify_call(
-                    kwargs.get(self._self_auth.auth_position.value))
+                self.inject_authentication_into_call_kwargs(func.__name__, kwargs)
                 return func(*args, **kwargs)
             return wrapped
         except Exception as e:
@@ -111,13 +120,13 @@ class AuthorizedClient(wrapt.ObjectProxy, Generic[Client]):
             name (str): The name of the method where the exception occurred.
             error (Exception): The exception that was raised.
         """
-        _msg = _auth_injection_failed_msg.format(name=name, error=str(error))
+        message = _auth_injection_failed_message.format(name=name, error=str(error))
         if EXCEPTION_POLICY == "raise":
             raise error
         elif EXCEPTION_POLICY == "log":
-            logger.warning(_msg)
+            logger.warning(message)
             logger.debug(traceback.format_exc())
         elif EXCEPTION_POLICY == "ignore":
-            logger.debug(_msg)
+            logger.debug(message)
         else:
-            raise AuthWrapConfigurationError(_auth_policy_exception_msg.format(exception_policy=EXCEPTION_POLICY))
+            raise AuthWrapConfigurationError(_invalid_exception_policy_message.format(exception_policy=EXCEPTION_POLICY))

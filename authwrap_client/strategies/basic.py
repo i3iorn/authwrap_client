@@ -9,7 +9,7 @@ class BasicAuth(HeaderAuth):
         import base64
         if not username or not password:
             raise InjectionError("Username and password must not be empty.")
-        token = base64.b64encode(f"{username}:{password}".encode()).decode()
-        data = {"Authorization": f"Basic {token}"}
-        data.update(extra_headers)
-        super().__init__(data)
+        basic_authorization_header_value = base64.b64encode(f"{username}:{password}".encode()).decode()
+        headers_to_inject = {"Authorization": f"Basic {basic_authorization_header_value}"}
+        headers_to_inject.update(extra_headers)
+        super().__init__(headers_to_inject)

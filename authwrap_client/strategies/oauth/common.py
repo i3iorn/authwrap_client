@@ -67,6 +67,21 @@ class TokenResponse:
         """
         return self._additional_fields
 
+    # Naming-friendly aliases
+    def as_dict(self) -> dict[str, Any]:
+        """
+        Returns the token response as a dictionary.
+        Alias for the json() method.
+        """
+        return self.json()
+
+    def as_json_string(self) -> str:
+        """
+        Returns the token response as a JSON string.
+        Alias for the text() method.
+        """
+        return self.text()
+
 
 class DeviceAuthorizationResponse(TypedDict):
     """Represents a Device Authorization response (RFC 8628 §3.1)."""

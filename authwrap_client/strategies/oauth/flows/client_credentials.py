@@ -49,71 +49,68 @@ class ClientCredentialsFlow(BaseAuthFlowProtocol):
 
         self.http_client, self.http_client_async = settle_clients(http_client, http_client_async)
 
-
-
-    def fetch_token(
-            self,
-            *,
-            scope: Optional[Union[str, List[str]]] = None,
-            client_id: Optional[str] = None,
-            client_secret: Optional[str] = None,
-            **kwargs: Any
-    ) -> TokenResponse:
-        """
-        Obtain an access token using client credentials (RFC 6749 §4.4.2).
-
-        Args:
-            scope: (Optional) Space-delimited string or list of scopes; overrides __init__.
-            client_id: (Optional) Overrides the `client_id` provided at init.
-            client_secret: (Optional) Overrides the `client_secret` provided at init.
-            **kwargs: Additional parameters passed to the HTTP client (e.g., headers).
-
-        Returns:
-            TokenResponse with at least:
-              - access_token
-              - token_type
-              - expires_in
-              - scope (if provided by server)
-
-        Raises:
-            OAuthError: If the token endpoint returns non-200 or invalid JSON.
-        """
-        # Determine which client_id and client_secret to use
-        cid = client_id or self.client_id
-        csec = client_secret or self.client_secret
-
-        # Determine scope string
-        token_scope = ""
+    # ---------------------------- internal helpers ----------------------------
+    def _resolve_scope(self, scope: Optional[Union[str, List[str]]]) -> str:
         if scope:
-            token_scope = " ".join(scope) if isinstance(scope, list) else scope
-        elif self.scope:
-            token_scope = self.scope
+            return " ".join(scope) if isinstance(scope, list) else scope
+        return self.scope or ""
 
-        headers = _basic_auth_header(cid, csec)
-
+    def _build_body(self, token_scope: str) -> Dict[str, Any]:
         body: Dict[str, Any] = {"grant_type": "client_credentials"}
         if token_scope:
             body["scope"] = token_scope
+        return body
 
-        response = self.http_client.request(
+    def _perform_request_sync(self, headers: Dict[str, str], body: Dict[str, Any], **kwargs: Any) -> Any:
+        return self.http_client.request(
             method="POST",
             url=self.token_url,
             data=body,
             headers=headers,
-            **kwargs
+            **kwargs,
         )
 
-        if response.status_code != 200:
-            raise OAuthError(
-                f"Client Credentials token request failed: {response.status_code} {response.text}"
-            )
+    async def _perform_request_async(self, headers: Dict[str, str], body: Dict[str, Any], **kwargs: Any) -> Any:
+        return await self.http_client_async.request(
+            method="POST",
+            url=self.token_url,
+            data=body,
+            headers=headers,
+            **kwargs,
+        )
 
+    def _parse_response(self, response: Any, token_scope: str, async_label: str = "") -> TokenResponse:
+        if response.status_code != 200:
+                        label = "async " if async_label else ""
+            raise OAuthError(
+                f"{label}client credentials request failed: {response.status_code} {response.text}"
+            )
         try:
             token_data = response.json()
         except ValueError as e:
-            raise OAuthError(f"Invalid JSON in token response: {e}")
-
+            label = "async " if async_label else ""
+            raise OAuthError(f"Invalid JSON in {label}token response: {e}")
         return sanitize_token_response(token_data, token_scope)
+
+    # ------------------------------ public API --------------------------------
+    def fetch_token(
+        self,
+        *,
+        scope: Optional[Union[str, List[str]]] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        **kwargs: Any,
+    ) -> TokenResponse:
+        """
+        Obtain an access token using client credentials (RFC 6749 §4.4.2).
+        """
+        cid = client_id or self.client_id
+        csec = client_secret or self.client_secret
+        token_scope = self._resolve_scope(scope)
+        headers = _basic_auth_header(cid, csec)
+        body = self._build_body(token_scope)
+        response = self._perform_request_sync(headers, body, **kwargs)
+        return self._parse_response(response, token_scope)
 
     async def fetch_token_async(
         self,
@@ -121,54 +118,15 @@ class ClientCredentialsFlow(BaseAuthFlowProtocol):
         scope: Optional[Union[str, List[str]]] = None,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> TokenResponse:
         """
         Async variant of fetch_token_client_credentials.
-
-        Args:
-            scope: (Optional) Overrides __init__ scope.
-            client_id: (Optional) Overrides __init__ client_id.
-            client_secret: (Optional) Overrides __init__ client_secret.
-            **kwargs: Additional parameters passed to async HTTP client.
-
-        Returns:
-            TokenResponse.
-
-        Raises:
-            OAuthError: If token endpoint returns non-200 or invalid JSON.
         """
         cid = client_id or self.client_id
         csec = client_secret or self.client_secret
-
-        token_scope = ""
-        if scope:
-            token_scope = " ".join(scope) if isinstance(scope, list) else scope
-        elif self.scope:
-            token_scope = self.scope
-
+        token_scope = self._resolve_scope(scope)
         headers = _basic_auth_header(cid, csec)
-
-        body: Dict[str, Any] = {"grant_type": "client_credentials"}
-        if token_scope:
-            body["scope"] = token_scope
-
-        response = await self.http_client_async.request(
-            method="POST",
-            url=self.token_url,
-            data=body,
-            headers=headers,
-            **kwargs
-        )
-
-        if response.status_code != 200:
-            raise OAuthError(
-                f"Async client credentials request failed: {response.status_code} {response.text}"
-            )
-
-        try:
-            token_data = response.json()
-        except ValueError as e:
-            raise OAuthError(f"Invalid JSON in async token response: {e}")
-
-        return sanitize_token_response(token_data, token_scope)
+        body = self._build_body(token_scope)
+        response = await self._perform_request_async(headers, body, **kwargs)
+        return self._parse_response(response, token_scope, async_label="async")

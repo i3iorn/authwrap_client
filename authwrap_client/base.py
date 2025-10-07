@@ -1,6 +1,14 @@
-from typing import Protocol, Dict, Optional, Any
+from __future__ import annotations
 
-from authwrap_client.strategies.base import AuthStrategyPosition
+from typing import Protocol, Dict, Optional, Any
+from enum import Enum
+
+
+class AuthStrategyPosition(Enum):
+    """Defines the position of the auth strategy in the request."""
+    HEADER = "headers"
+    BODY = "json"
+    QUERY_PARAM = "params"
 
 
 class AuthStrategy(Protocol):
@@ -11,7 +19,7 @@ class AuthStrategy(Protocol):
         ...
 
     def modify_call(self, headers: Optional[Dict[str, str]]) -> Dict[str, str]:
-        """Mutates the request headers with the authorization information."""
+                """Return new headers with the authorization information."""
         ...
 
 
@@ -85,62 +93,55 @@ class ClientProtocol(Protocol):
 
 class RequestProtocol(Protocol):
     """
-    Defines a pluggable request protocol interface for making requests.
+    Describes an HTTP request's components.
 
-    This interface is not meant to be used directly, but rather to be used as an
-    internal proxy for the actual request implementation. It allows for different
-    request implementations to be used interchangeably, as long as they adhere to
-    this protocol.
+    This is intended for per-request data, not global state.
     """
     @property
     def method(self) -> str:
-        """Get the method of the last request."""
+        """Get the HTTP method for the request."""
         ...
 
     @property
     def url(self) -> str:
-        """Get the URL of the last request."""
+        """Get the request URL."""
         ...
 
     @property
     def headers(self) -> Dict[str, str]:
-        """Get the headers of the last request."""
+        """Get the request headers."""
         ...
 
     @property
     def params(self) -> Dict[str, str]:
-        """Get the query parameters of the last request."""
+        """Get the request query parameters."""
         ...
 
     @property
     def data(self) -> Optional[Dict[str, str]]:
-        """Get the form data of the last request."""
+        """Get the request form data."""
         ...
-
 
 
 class ResponseProtocol(Protocol):
     """
-    Defines a pluggable response protocol interface for handling responses.
+    Describes an HTTP response and helpers to access its payload.
 
-    This interface is not meant to be used directly, but rather to be used as an
-    internal proxy for the actual response implementation. It allows for different
-    response implementations to be used interchangeably, as long as they adhere to
-    this protocol.
+    This is intended for per-response data, not global state.
     """
     @property
     def status_code(self) -> int:
-        """Get the status code of the last request."""
+        """Get the HTTP status code."""
         ...
 
     @property
     def headers(self) -> Dict[str, str]:
-        """Get the headers of the last request."""
+        """Get the response headers."""
         ...
 
     @property
     def content(self) -> bytes:
-        """Get the content of the last request."""
+        """Get the raw response bytes."""
         ...
 
     def json(self) -> Dict[str, Any]:

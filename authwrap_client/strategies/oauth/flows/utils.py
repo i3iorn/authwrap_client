@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import base64
 from typing import Optional, Tuple, Dict
 
@@ -8,26 +9,33 @@ _sclient: Optional[object] = None
 _aclient: Optional[object] = None
 
 
-def settle_clients(sync_client, async_client) -> Tuple["Session", "AsyncClient"]:
+def settle_clients(sync_client: Optional[object], async_client: Optional[object]) -> Tuple[object, Optional[object]]:
     """Return sync/async HTTP clients, creating and caching defaults if needed.
 
-    Caches created clients so repeated flow construction can reuse them.
+    Only the sync client is created by default. The async client is optional and
+    left as-is unless explicitly provided, avoiding unnecessary dependencies.
+    Returns a tuple of (sync_client_instance, async_client_or_none).
     """
     global _sclient, _aclient
-    if not sync_client and not _sclient:
-        try:
-            import requests
-        except ImportError as e:
-            raise ImportError("requests is required for sync HTTP client support") from e
-        sync_client = requests.Session()
-    _sclient = sync_client
-    if not async_client and not _aclient:
-        try:
-            import httpx
-        except ImportError as e:
-            raise ImportError("httpx is required for async HTTP client support") from e
-        async_client = httpx.Client
-    _aclient = async_client
+
+    # Sync client
+    if sync_client is None:
+        if _sclient is None:
+            try:
+                import requests
+            except ImportError as e:
+                raise ImportError("requests is required for sync HTTP client support") from e
+            _sclient = requests.Session()
+        sync_client = _sclient
+    else:
+        _sclient = sync_client
+
+    # Async client (optional; do not import httpx unless provided by caller)
+    if async_client is None:
+        async_client = _aclient  # May be None if never set
+    else:
+        _aclient = async_client
+
     return sync_client, async_client
 
 
@@ -50,9 +58,25 @@ def sanitize_token_response(data: dict, fallback_scope: str = "") -> TokenRespon
         scope=data.get("scope", fallback_scope),
     )
 
+
+# --------- Naming-friendly aliases (backwards compatible) ---------
+
+def get_or_create_http_clients(sync_client: Optional[object], async_client: Optional[object]) -> Tuple[object, Optional[object]]:
+    return settle_clients(sync_client, async_client)
+
+
+def build_basic_authorization_header(client_id: Optional[str], client_secret: Optional[str]) -> Dict[str, str]:
+    return _basic_auth_header(client_id, client_secret)
+
+
+def build_token_response_from_dict(data: dict, fallback_scope: str = "") -> TokenResponse:
+    return sanitize_token_response(data, fallback_scope)
+
 __all__ = [
     "settle_clients",
     "_basic_auth_header",
     "sanitize_token_response",
+    "get_or_create_http_clients",
+    "build_basic_authorization_header",
+    "build_token_response_from_dict",
 ]
-

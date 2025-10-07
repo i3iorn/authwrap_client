@@ -6,8 +6,9 @@ from .proxy import AuthorizedClient
 logger = getLogger(__name__)
 
 
-def _standard_string_validation(value: str, name: str) -> None:
-    """Helper function to validate standard string inputs."""
+# Naming-friendly helpers
+
+def validate_non_empty_string_parameter(value: str, name: str) -> None:
     if not value:
         raise ValueError(f"{name} must be provided and cannot be empty.")
     if not isinstance(value, str):
@@ -17,8 +18,7 @@ def _standard_string_validation(value: str, name: str) -> None:
     logger.debug(f"Validated {name}: {value}")
 
 
-def _validate_client(client: Any) -> None:
-    """Helper function to validate the client."""
+def validate_http_client_has_request_method(client: Any) -> None:
     if not client:
         raise ValueError("Client must not be None.")
     if not hasattr(client, 'request'):
@@ -28,17 +28,24 @@ def _validate_client(client: Any) -> None:
     logger.debug(f"Validated client: {client.__class__.__name__}")
 
 
+# Back-compat wrappers
+
+def _standard_string_validation(value: str, name: str) -> None:
+    validate_non_empty_string_parameter(value, name)
+
+
+def _validate_client(client: Any) -> None:
+    validate_http_client_has_request_method(client)
+
+
+# Public API (existing)
+
 def wrap_client(
     client: Any, auth_strategy: str, **kwargs: Any
 ) -> Any:
-    """Wraps a client with the specified authentication strategy."""
     from .proxy import AuthorizedClient
-
-    # Validate input and do sanity checks
-    _validate_client(client)
-
+    validate_http_client_has_request_method(client)
     auth_strategy = auth_strategy.lower()
-
     if auth_strategy == "basic":
         return wrap_with_basic_auth(client, **kwargs)
     elif auth_strategy == "bearer_token":
@@ -52,14 +59,10 @@ def wrap_client(
 def wrap_with_basic_auth(
     client: Any, username: str, password: str, **kwargs: Any
 ) -> Any:
-    """Wraps a client with Basic Auth."""
     from authwrap_client.strategies import BasicAuth
-
-    # Validate input and do sanity checks
-    _standard_string_validation(username, "Username")
-    _standard_string_validation(password, "Password")
-    _validate_client(client)
-
+    validate_non_empty_string_parameter(username, "Username")
+    validate_non_empty_string_parameter(password, "Password")
+    validate_http_client_has_request_method(client)
     auth = BasicAuth(username, password, **kwargs)
     logger.debug(f"Wrapping client with Basic Auth for user: {username}")
     return AuthorizedClient(client, auth)
@@ -68,14 +71,10 @@ def wrap_with_basic_auth(
 def wrap_with_bearer_token(
     client: Any, token: str, **kwargs: Any
 ) -> Any:
-    """Wraps a client with Bearer Token Auth."""
     from authwrap_client.strategies import BearerTokenAuth
-
-    # Validate input and do sanity checks
-    _standard_string_validation(token, "Token")
-    _validate_client(client)
-
-    auth = BearerTokenAuth(token, **kwargs)
+    validate_non_empty_string_parameter(token, "Token")
+    validate_http_client_has_request_method(client)
+        auth = BearerTokenAuth(token, **kwargs)
     logger.debug(f"Wrapping client with Bearer Token Auth")
     return AuthorizedClient(client, auth)
 
@@ -83,19 +82,42 @@ def wrap_with_bearer_token(
 def wrap_with_oauth2(
     client: Any, token_url: str, **kwargs: Any
 ) -> Any:
-    """Wraps a client with OAuth 2.0 Auth."""
     from authwrap_client.strategies import OAuth2Auth
-
-    # Validate input and do sanity checks
-    _validate_client(client)
-
+    validate_http_client_has_request_method(client)
     auth = OAuth2Auth(token_url, **kwargs)
     logger.debug(f"Wrapping client with OAuth 2.0 Auth for token URL: {token_url}")
     return AuthorizedClient(client, auth)
 
 
 def unwrap_client(client: AuthorizedClient) -> Any:
-    """Unwraps a client, returning the original client."""
-    if hasattr(client, '_wrapped_client'):
-        return client.wrapped_client
-    return client
+    try:
+        if isinstance(client, AuthorizedClient):
+            return client.wrapped_client
+        inner = getattr(client, "__wrapped__", None)
+        return inner if inner is not None else client
+    except Exception:
+        return client
+
+
+# Naming-friendly public aliases
+
+def wrap_http_client_with_authentication(client: Any, auth_strategy: str, **kwargs: Any) -> Any:
+    return wrap_client(client, auth_strategy, **kwargs)
+
+
+def wrap_http_client_with_basic_authentication(client: Any, username: str, password: str, **kwargs: Any) -> Any:
+    return wrap_with_basic_auth(client, username, password, **kwargs)
+
+
+def wrap_http_client_with_bearer_token_authentication(client: Any, bearer_token: str, **kwargs: Any) -> Any:
+    # Remove 'token' from kwargs if present to avoid multiple values for 'token'
+    kwargs.pop('token', None)
+    return wrap_with_bearer_token(client, token=bearer_token, **kwargs)
+
+
+def wrap_http_client_with_oauth2_authentication(client: Any, token_endpoint_url: str, **kwargs: Any) -> Any:
+    return wrap_with_oauth2(client, token_endpoint_url, **kwargs)
+
+
+def unwrap_to_original_client(client: AuthorizedClient) -> Any:
+    return unwrap_client(client)
